@@ -22,78 +22,216 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build project structure
+      - name: Create complete Android project
         run: |
+          # ── Directories ──────────────────────────────────────────────────
           mkdir -p app/src/main/java/com/gseterminal/app
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
           mkdir -p app/src/main/res/xml
-          mkdir -p app/src/main/res/mipmap-mdpi
-          mkdir -p app/src/main/res/mipmap-hdpi
-          mkdir -p app/src/main/res/mipmap-xhdpi
-          mkdir -p app/src/main/res/mipmap-xxhdpi
-          mkdir -p app/src/main/res/mipmap-xxxhdpi
           mkdir -p app/src/main/assets
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            mkdir -p app/src/main/res/mipmap-$d
+          done
           mkdir -p gradle/wrapper
 
-          cp MainActivity.kt      app/src/main/java/com/gseterminal/app/ || true
-          cp SplashActivity.kt    app/src/main/java/com/gseterminal/app/ || true
-          cp GSEApplication.kt    app/src/main/java/com/gseterminal/app/ || true
-          cp WebAppInterface.kt   app/src/main/java/com/gseterminal/app/ || true
-          cp AndroidManifest.xml  app/src/main/ || true
-          cp activity_main.xml    app/src/main/res/layout/ || true
-          cp activity_splash.xml  app/src/main/res/layout/ || true
-          cp strings.xml          app/src/main/res/values/ || true
-          cp colors.xml           app/src/main/res/values/ || true
-          cp themes.xml           app/src/main/res/values/ || true
-          cp network_security_config.xml app/src/main/res/xml/ || true
-          cp backup_rules.xml            app/src/main/res/xml/ || true
-          cp data_extraction_rules.xml   app/src/main/res/xml/ || true
-          cp index.html           app/src/main/assets/ || true
-          cp libs.versions.toml   gradle/ || true
+          # ── settings.gradle.kts ──────────────────────────────────────────
+          cat > settings.gradle.kts << 'EOF'
+          pluginManagement {
+              repositories { google(); mavenCentral(); gradlePluginPortal() }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories { google(); mavenCentral() }
+          }
+          rootProject.name = "GSETerminal"
+          include(":app")
+          EOF
 
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            cp ic_launcher.png       app/src/main/res/mipmap-$d/ || true
-            cp ic_launcher_round.png app/src/main/res/mipmap-$d/ || true
-          done
+          # ── root build.gradle.kts ────────────────────────────────────────
+          cat > build.gradle.kts << 'EOF'
+          plugins {
+              id("com.android.application") version "8.5.0" apply false
+              id("org.jetbrains.kotlin.android") version "1.9.24" apply false
+          }
+          EOF
 
-          if [ -f "gradle--wrapper.properties" ]; then
-            cp gradle--wrapper.properties gradle/wrapper/gradle-wrapper.properties
-          elif [ -f "gradle-wrapper.properties" ]; then
-            cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
+          # ── gradle.properties ────────────────────────────────────────────
+          cat > gradle.properties << 'EOF'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          android.enableJetifier=false
+          kotlin.code.style=official
+          EOF
+
+          # ── app/build.gradle.kts ─────────────────────────────────────────
+          cat > app/build.gradle.kts << 'EOF'
+          plugins {
+              id("com.android.application")
+              id("org.jetbrains.kotlin.android")
+          }
+          android {
+              namespace  = "com.gseterminal.app"
+              compileSdk = 34
+              defaultConfig {
+                  applicationId = "com.gseterminal.app"
+                  minSdk        = 24
+                  targetSdk     = 34
+                  versionCode   = 1
+                  versionName   = "1.0.0"
+              }
+              buildTypes {
+                  release {
+                      isMinifyEnabled = false
+                      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions { jvmTarget = "17" }
+              buildFeatures { viewBinding = true }
+              sourceSets["main"].assets.srcDirs("src/main/assets")
+          }
+          dependencies {
+              implementation("androidx.core:core-ktx:1.13.1")
+              implementation("androidx.appcompat:appcompat:1.7.0")
+              implementation("com.google.android.material:material:1.12.0")
+              implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+              implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+              implementation("androidx.webkit:webkit:1.11.0")
+          }
+          EOF
+
+          # ── proguard-rules.pro ───────────────────────────────────────────
+          cat > app/proguard-rules.pro << 'EOF'
+          -keepattributes JavascriptInterface
+          -keepclassmembers class com.gseterminal.app.WebAppInterface { public *; }
+          -keep class androidx.webkit.** { *; }
+          -dontwarn kotlin.**
+          EOF
+
+          # ── AndroidManifest.xml ──────────────────────────────────────────
+          if [ -f "AndroidManifest.xml" ]; then
+            cp AndroidManifest.xml app/src/main/
           else
-            cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
+          cat > app/src/main/AndroidManifest.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application
+                  android:name=".GSEApplication"
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:label="GSE Terminal"
+                  android:theme="@style/Theme.GSETerminal"
+                  android:networkSecurityConfig="@xml/network_security_config"
+                  android:hardwareAccelerated="true"
+                  android:dataExtractionRules="@xml/data_extraction_rules"
+                  android:fullBackupContent="@xml/backup_rules"
+                  tools:targetApi="31">
+                  <activity
+                      android:name=".SplashActivity"
+                      android:exported="true"
+                      android:theme="@style/Theme.GSETerminal"
+                      android:noHistory="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="false"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:windowSoftInputMode="adjustResize">
+                  </activity>
+              </application>
+          </manifest>
           EOF
           fi
 
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          # ── Kotlin source files ──────────────────────────────────────────
+          SRC=app/src/main/java/com/gseterminal/app
 
-      - name: Create gradlew script
-        run: |
-          cat > gradlew << 'GRADLEW'
-          #!/bin/sh
-          APP_HOME="$(cd "$(dirname "$0")" && pwd)"
-          CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
-          exec java -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
-          GRADLEW
-          chmod +x gradlew
+          for f in GSEApplication.kt MainActivity.kt SplashActivity.kt WebAppInterface.kt; do
+            [ -f "$f" ] && cp "$f" "$SRC/" && echo "Copied $f"
+          done
 
-      - name: Download Gradle wrapper jar
-        run: |
-          curl -sL "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
-            -o gradle/wrapper/gradle-wrapper.jar
-          ls -lh gradle/wrapper/
+          # Write any missing Kotlin files
+          [ ! -f "$SRC/GSEApplication.kt" ] && cat > "$SRC/GSEApplication.kt" << 'EOF'
+          package com.gseterminal.app
+          import android.app.Application
+          import android.webkit.WebView
+          class GSEApplication : Application() {
+              override fun onCreate() {
+                  super.onCreate()
+                  if (BuildConfig.DEBUG) WebView.setWebContentsDebuggingEnabled(true)
+              }
+          }
+          EOF
 
-      - name: Build APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+          [ ! -f "$SRC/SplashActivity.kt" ] && cat > "$SRC/SplashActivity.kt" << 'EOF'
+          package com.gseterminal.app
+          import android.annotation.SuppressLint
+          import android.content.Intent
+          import android.os.Bundle
+          import android.os.Handler
+          import android.os.Looper
+          import androidx.appcompat.app.AppCompatActivity
+          @SuppressLint("CustomSplashScreen")
+          class SplashActivity : AppCompatActivity() {
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContentView(R.layout.activity_splash)
+                  Handler(Looper.getMainLooper()).postDelayed({
+                      startActivity(Intent(this, MainActivity::class.java))
+                  }, 1800L)
+              }
+          }
+          EOF
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: GSETerminal-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          [ ! -f "$SRC/WebAppInterface.kt" ] && cat > "$SRC/WebAppInterface.kt" << 'EOF'
+          package com.gseterminal.app
+          import android.content.Context
+          import android.content.Intent
+          import android.net.Uri
+          import android.webkit.JavascriptInterface
+          import android.widget.Toast
+          class WebAppInterface(private val context: Context) {
+              @JavascriptInterface fun showToast(msg: String) {
+                  (context as? MainActivity)?.runOnUiThread { Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
+              }
+              @JavascriptInterface fun openUrl(url: String) {
+                  context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
+              }
+              @JavascriptInterface fun isAndroid(): Boolean = true
+              @JavascriptInterface fun getAppVersion(): String = BuildConfig.VERSION_NAME
+          }
+          EOF
+
+          [ ! -f "$SRC/MainActivity.kt" ] && cat > "$SRC/MainActivity.kt" << 'EOF'
+          package com.gseterminal.app
+          import android.annotation.SuppressLint
+          import android.content.Context
+          import android.graphics.Bitmap
+          import android.net.ConnectivityManager
+          import android.net.NetworkCapabilities
+          import android.os.Bundle
+          import android.view.View
+          import android.webkit.*
+          import androidx.activity.OnBackPressedCallback
+          import androidx.appcompat.app.AppCompatActivity
+          import androidx.webkit.WebSettingsCompat
+          import androidx.webkit.WebViewFeature
+          import com.gseterminal.app.databinding.ActivityMainBinding
+          class MainActivity : AppCompatActivity() {
+              private lateinit var binding: ActivityMainBinding
+              @SuppressLint("SetJavaScriptEnabled")
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  binding = ActivityMainBi
