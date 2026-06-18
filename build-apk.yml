@@ -22,9 +22,13 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Create full Android project structure
+      - name: Show all files in repo
         run: |
-          # Create all required directories
+          echo "=== ALL FILES IN REPO ==="
+          find . -not -path './.git/*' | sort
+
+      - name: Build project structure
+        run: |
           mkdir -p app/src/main/java/com/gseterminal/app
           mkdir -p app/src/main/res/layout
           mkdir -p app/src/main/res/values
@@ -37,68 +41,73 @@ jobs:
           mkdir -p app/src/main/assets
           mkdir -p gradle/wrapper
 
-          # Move Kotlin files to correct location
-          mv MainActivity.kt      app/src/main/java/com/gseterminal/app/ 2>/dev/null || true
-          mv SplashActivity.kt    app/src/main/java/com/gseterminal/app/ 2>/dev/null || true
-          mv GSEApplication.kt    app/src/main/java/com/gseterminal/app/ 2>/dev/null || true
-          mv WebAppInterface.kt   app/src/main/java/com/gseterminal/app/ 2>/dev/null || true
+          # Kotlin source files
+          cp MainActivity.kt      app/src/main/java/com/gseterminal/app/ || echo "SKIP MainActivity.kt"
+          cp SplashActivity.kt    app/src/main/java/com/gseterminal/app/ || echo "SKIP SplashActivity.kt"
+          cp GSEApplication.kt    app/src/main/java/com/gseterminal/app/ || echo "SKIP GSEApplication.kt"
+          cp WebAppInterface.kt   app/src/main/java/com/gseterminal/app/ || echo "SKIP WebAppInterface.kt"
 
-          # Move XML resources
-          mv AndroidManifest.xml         app/src/main/         2>/dev/null || true
-          mv activity_main.xml           app/src/main/res/layout/  2>/dev/null || true
-          mv activity_splash.xml         app/src/main/res/layout/  2>/dev/null || true
-          mv strings.xml                 app/src/main/res/values/  2>/dev/null || true
-          mv colors.xml                  app/src/main/res/values/  2>/dev/null || true
-          mv themes.xml                  app/src/main/res/values/  2>/dev/null || true
-          mv network_security_config.xml app/src/main/res/xml/     2>/dev/null || true
-          mv backup_rules.xml            app/src/main/res/xml/     2>/dev/null || true
-          mv data_extraction_rules.xml   app/src/main/res/xml/     2>/dev/null || true
+          # Android Manifest
+          cp AndroidManifest.xml app/src/main/ || echo "SKIP AndroidManifest"
 
-          # Move icons
-          mv ic_launcher.png       app/src/main/res/mipmap-xxhdpi/ 2>/dev/null || true
-          mv ic_launcher_round.png app/src/main/res/mipmap-xxhdpi/ 2>/dev/null || true
+          # Layout files
+          cp activity_main.xml   app/src/main/res/layout/ || echo "SKIP activity_main"
+          cp activity_splash.xml app/src/main/res/layout/ || echo "SKIP activity_splash"
 
-          # Copy icons to all densities
-          for d in mdpi hdpi xhdpi xxxhdpi; do
-            cp app/src/main/res/mipmap-xxhdpi/ic_launcher.png       app/src/main/res/mipmap-$d/ 2>/dev/null || true
-            cp app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png app/src/main/res/mipmap-$d/ 2>/dev/null || true
+          # Resource values
+          cp strings.xml app/src/main/res/values/ || echo "SKIP strings"
+          cp colors.xml  app/src/main/res/values/ || echo "SKIP colors"
+          cp themes.xml  app/src/main/res/values/ || echo "SKIP themes"
+
+          # XML configs
+          cp network_security_config.xml app/src/main/res/xml/ || echo "SKIP network_security"
+          cp backup_rules.xml            app/src/main/res/xml/ || echo "SKIP backup_rules"
+          cp data_extraction_rules.xml   app/src/main/res/xml/ || echo "SKIP data_extraction"
+
+          # Web app HTML
+          cp index.html app/src/main/assets/ || echo "SKIP index.html"
+
+          # Icons — copy to all densities
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            cp ic_launcher.png       app/src/main/res/mipmap-$d/ || echo "SKIP icon $d"
+            cp ic_launcher_round.png app/src/main/res/mipmap-$d/ || echo "SKIP round icon $d"
           done
 
-          # Move Gradle files
-          mv gradle--wrapper.properties gradle/wrapper/gradle-wrapper.properties 2>/dev/null || true
-          mv libs.versions.toml         gradle/                                   2>/dev/null || true
-
-          echo "✅ Directory structure created"
-          find app -type f | sort
-
-      - name: Download Gradle wrapper jar
-        run: |
-          mkdir -p gradle/wrapper
-          curl -sL "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
-            -o gradle/wrapper/gradle-wrapper.jar || \
-          wget -q "https://services.gradle.org/distributions/gradle-8.7-bin.zip" \
-            -O /tmp/gradle.zip && \
-          unzip -q /tmp/gradle.zip -d /tmp/gradle-dist && \
-          cp /tmp/gradle-dist/gradle-8.7/lib/plugins/gradle-wrapper-*.jar \
-            gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
-
-      - name: Write gradle-wrapper.properties
-        run: |
-          cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          # Gradle wrapper properties — handle both dash variants
+          if [ -f "gradle--wrapper.properties" ]; then
+            cp gradle--wrapper.properties gradle/wrapper/gradle-wrapper.properties
+          elif [ -f "gradle-wrapper.properties" ]; then
+            cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
+          else
+            cat > gradle/wrapper/gradle-wrapper.properties << 'PROPS'
           distributionBase=GRADLE_USER_HOME
           distributionPath=wrapper/dists
           distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
           zipStoreBase=GRADLE_USER_HOME
           zipStorePath=wrapper/dists
-          EOF
+          PROPS
+          fi
 
-      - name: Create local.properties
-        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          # libs.versions.toml
+          cp libs.versions.toml gradle/ || echo "SKIP libs.versions.toml"
+
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+          echo "=== FINAL STRUCTURE ==="
+          find app -type f | sort
+
+      - name: Download Gradle wrapper jar
+        run: |
+          curl -sL "https://github.com/nicowillis/gradle-wrapper-jar/raw/main/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar || \
+          wget -q "https://github.com/nicowillis/gradle-wrapper-jar/raw/main/gradle-wrapper.jar" \
+            -O gradle/wrapper/gradle-wrapper.jar || \
+          echo "Will use gradlew to bootstrap"
 
       - name: Make gradlew executable
-        run: chmod +x ./gradlew
+        run: chmod +x gradlew
 
-      - name: Build Debug APK
+      - name: Build APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
@@ -107,8 +116,3 @@ jobs:
           name: GSETerminal-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-
-      - name: Show result
-        run: |
-          echo "✅ Build complete!"
-          ls -lh app/build/outputs/apk/debug/ || echo "APK not found"
