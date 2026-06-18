@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- GSE Brand colours (match CSS variables in HTML) -->
+    <color name="gse_green">#059669</color>
+    <color name="gse_amber">#d97706</color>
+    <color name="gse_red">#dc2626</color>
+    <color name="gse_blue">#2563eb</color>
+
+    <!-- Backgrounds -->
+    <color name="bg_main">#f8fafc</color>
+    <color name="splash_bg">#0f172a</color>
+
+    <!-- Text -->
+    <color name="text_primary">#0f172a</color>
+    <color name="text_muted">#64748b</color>
+
+    <!-- Status bar -->
+    <color name="status_bar">#1e293b</color>
+</resources>

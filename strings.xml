@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GSE Terminal</string>
+    <string name="error_title">No Connection</string>
+    <string name="error_subtitle">GSE Terminal needs internet to load live market data.\nCheck your connection and try again.</string>
+    <string name="retry">Retry</string>
+    <string name="data_disclaimer">For informational purposes only · Not financial advice</string>
+</resources>
