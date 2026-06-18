@@ -475,6 +475,7 @@ jobs:
 
       - name: Write assets and icons
         run: |
+          pip install Pillow --quiet 2>/dev/null || true
           # HTML asset
           if [ -f "index.html" ]; then
             cp index.html app/src/main/assets/
