@@ -36,42 +36,58 @@ jobs:
           mkdir -p app/src/main/assets
           mkdir -p gradle/wrapper
 
-          cp MainActivity.kt      app/src/main/java/com/gseterminal/app/
-          cp SplashActivity.kt    app/src/main/java/com/gseterminal/app/
-          cp GSEApplication.kt    app/src/main/java/com/gseterminal/app/
-          cp WebAppInterface.kt   app/src/main/java/com/gseterminal/app/
-
-          cp AndroidManifest.xml         app/src/main/
-          cp activity_main.xml           app/src/main/res/layout/
-          cp activity_splash.xml         app/src/main/res/layout/
-          cp strings.xml                 app/src/main/res/values/
-          cp colors.xml                  app/src/main/res/values/
-          cp themes.xml                  app/src/main/res/values/
-          cp network_security_config.xml app/src/main/res/xml/
-          cp backup_rules.xml            app/src/main/res/xml/
-          cp data_extraction_rules.xml   app/src/main/res/xml/
-          cp index.html                  app/src/main/assets/
+          cp MainActivity.kt      app/src/main/java/com/gseterminal/app/ || true
+          cp SplashActivity.kt    app/src/main/java/com/gseterminal/app/ || true
+          cp GSEApplication.kt    app/src/main/java/com/gseterminal/app/ || true
+          cp WebAppInterface.kt   app/src/main/java/com/gseterminal/app/ || true
+          cp AndroidManifest.xml  app/src/main/ || true
+          cp activity_main.xml    app/src/main/res/layout/ || true
+          cp activity_splash.xml  app/src/main/res/layout/ || true
+          cp strings.xml          app/src/main/res/values/ || true
+          cp colors.xml           app/src/main/res/values/ || true
+          cp themes.xml           app/src/main/res/values/ || true
+          cp network_security_config.xml app/src/main/res/xml/ || true
+          cp backup_rules.xml            app/src/main/res/xml/ || true
+          cp data_extraction_rules.xml   app/src/main/res/xml/ || true
+          cp index.html           app/src/main/assets/ || true
+          cp libs.versions.toml   gradle/ || true
 
           for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            cp ic_launcher.png       app/src/main/res/mipmap-$d/
-            cp ic_launcher_round.png app/src/main/res/mipmap-$d/
+            cp ic_launcher.png       app/src/main/res/mipmap-$d/ || true
+            cp ic_launcher_round.png app/src/main/res/mipmap-$d/ || true
           done
 
-          cp gradle-wrapper.properties gradle/wrapper/
-          cp libs.versions.toml        gradle/
+          if [ -f "gradle--wrapper.properties" ]; then
+            cp gradle--wrapper.properties gradle/wrapper/gradle-wrapper.properties
+          elif [ -f "gradle-wrapper.properties" ]; then
+            cp gradle-wrapper.properties gradle/wrapper/gradle-wrapper.properties
+          else
+            cat > gradle/wrapper/gradle-wrapper.properties << 'EOF'
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+          fi
 
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-          echo "=== Structure ==="
-          find app/src -type f | sort
+      - name: Create gradlew script
+        run: |
+          cat > gradlew << 'GRADLEW'
+          #!/bin/sh
+          APP_HOME="$(cd "$(dirname "$0")" && pwd)"
+          CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+          exec java -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"
+          GRADLEW
+          chmod +x gradlew
 
       - name: Download Gradle wrapper jar
         run: |
-          curl -sL "https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
+          curl -sL "https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar" \
             -o gradle/wrapper/gradle-wrapper.jar
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
+          ls -lh gradle/wrapper/
 
       - name: Build APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
@@ -81,4 +97,3 @@ jobs:
         with:
           name: GSETerminal-APK
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
