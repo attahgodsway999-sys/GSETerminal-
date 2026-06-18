@@ -1,0 +1,13 @@
+# ─── local.properties.template ───────────────────────────────────────────────
+# Copy this file to local.properties and fill in your values.
+# NEVER commit local.properties to git — it's in .gitignore.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Android SDK location (required)
+sdk.dir=/Users/YOUR_NAME/Library/Android/sdk
+
+# ── Release signing (required for signed APK / Play Store upload) ──
+KEYSTORE_FILE=../keystore/gse_release.jks
+KEY_ALIAS=gse_key
+KEY_PASSWORD=your_key_password_here
+STORE_PASSWORD=your_store_password_here
