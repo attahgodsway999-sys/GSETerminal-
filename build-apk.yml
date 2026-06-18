@@ -29,29 +29,12 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/libs.versions.toml') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
       - name: Build APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload APK ⬇️ Download from here
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: GSETerminal-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-
-      - name: Done
-        run: |
-          echo "=========================================="
-          echo " ✅ APK built successfully!"
-          echo " 📱 Download: Actions tab → GSETerminal-APK"
-          echo "=========================================="
-          ls -lh app/build/outputs/apk/debug/
